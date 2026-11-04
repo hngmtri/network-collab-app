@@ -1,0 +1,3 @@
+[submodule "UDP-Secure-File-Transfer"]
+	path = UDP-Secure-File-Transfer
+	url = https://github.com/duongtrongphuc/UDP-Secure-File-Transfer
