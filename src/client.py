@@ -1,4 +1,3 @@
-
 import os
 import socket
 import sys
@@ -6,6 +5,8 @@ import threading
 import time
 
 from reliable import ReliableSocket
+
+os.environ.setdefault("APP_SECRET", "my_secret_key_123")
 
 SERVER_HOST = os.environ.get("SERVER", "127.0.0.1")
 PORT = int(os.environ.get("PORT", "9000"))

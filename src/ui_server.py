@@ -2,11 +2,11 @@ import socket
 import threading
 import json
 import time
+import os
 
 # Step 7 & 9 Complete Implementation:
 # - Serves HTTP using ONLY raw sockets (Django/Flask prohibited).
 # - Handles broken pipes, timeouts, and concurrent requests safely.
-
 # Dummy state to demonstrate the UI (Teammates will replace this with live UDP data)
 app_state = {
     "users": ["Alice (192.168.1.10)", "Bob (192.168.1.11)"],
@@ -43,30 +43,30 @@ def handle_http_request(client_socket, client_address):
         
         # Routing raw HTTP
         if path == '/':
-            with open('index.html', 'r', encoding='utf-8') as f:
+            ui_path = os.path.join(os.path.dirname(__file__), '..', 'ui', 'index.html')
+            with open(ui_path, 'r', encoding='utf-8') as f:
                 html_content = f.read()
-            response = (
+            encoded_html = html_content.encode('utf-8')
+            response_headers = (
                 "HTTP/1.1 200 OK\r\n"
-                "Content-Type: text/html\r\n"
-                f"Content-Length: {len(html_content)}\r\n"
+                "Content-Type: text/html; charset=utf-8\r\n"
+                f"Content-Length: {len(encoded_html)}\r\n"
                 "Connection: close\r\n\r\n"
-                f"{html_content}"
             )
-            client_socket.sendall(response.encode('utf-8'))
+            client_socket.sendall(response_headers.encode('utf-8') + encoded_html)
             
         elif path == '/api/network_state':
-            json_data = json.dumps(app_state)
-            response = (
+            json_str = json.dumps(app_state)
+            encoded_json = json_str.encode('utf-8')
+            response_headers = (
                 "HTTP/1.1 200 OK\r\n"
-                "Content-Type: application/json\r\n"
+                "Content-Type: application/json; charset=utf-8\r\n"
                 "Access-Control-Allow-Origin: *\r\n"
-                f"Content-Length: {len(json_data)}\r\n"
+                f"Content-Length: {len(encoded_json)}\r\n"
                 "Connection: close\r\n\r\n"
-                f"{json_data}"
             )
-            client_socket.sendall(response.encode('utf-8'))
+            client_socket.sendall(response_headers.encode('utf-8') + encoded_json)
         else:
-            # 404 Not Found
             client_socket.sendall(b"HTTP/1.1 404 Not Found\r\n\r\n")
 
     except socket.timeout:
@@ -90,7 +90,7 @@ def start_resilient_server(host='127.0.0.1', port=8081):
         print(f"Resilient UI Server running at http://{host}:{port}/")
         
         # Start background simulator for demo purposes
-        threading.Thread(target=simulate_incoming_data, daemon=True).start()
+        # threading.Thread(target=simulate_incoming_data, daemon=True).start()
         
         while True:
             client_sock, addr = server.accept()
