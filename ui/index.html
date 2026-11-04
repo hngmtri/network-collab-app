@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Collaboration App UI</title>
+    <style>
+        body { font-family: Arial, sans-serif; display: flex; margin: 0; height: 100vh; }
+        #sidebar { width: 250px; background: #f4f4f4; padding: 20px; border-right: 1px solid #ccc; }
+        #main { flex-grow: 1; display: flex; flex-direction: column; }
+        #chat { flex-grow: 1; padding: 20px; overflow-y: auto; background: #fff; }
+        #files { height: 200px; background: #fafafa; border-top: 1px solid #ccc; padding: 20px; overflow-y: auto; }
+        h3 { margin-top: 0; color: #333; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+        .message { margin-bottom: 10px; line-height: 1.4; padding: 8px; background: #e9ecef; border-radius: 5px; }
+        .progress-container { margin-bottom: 15px; }
+        .progress-bar { width: 100%; background: #ddd; margin-top: 5px; border-radius: 4px; overflow: hidden; }
+        .progress { height: 12px; background: #4caf50; width: 0%; transition: width 0.3s; }
+        .user-item { padding: 8px 0; color: #555; border-bottom: 1px solid #eee; }
+        .status-dot { color: #4caf50; font-size: 12px; margin-right: 5px; }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <h3>Active Users</h3>
+        <div id="user-list"><i>Loading peers...</i></div>
+    </div>
+    <div id="main">
+        <div id="chat">
+            <h3>Global Chat & Direct Messages</h3>
+            <div id="messages"><i>Connecting to stream...</i></div>
+        </div>
+        <div id="files">
+            <h3>File Transfers</h3>
+            <div id="file-progress"><i>No active transfers.</i></div>
+        </div>
+    </div>
+
+    <script>
+        // Step 9: Client-side JavaScript only (No WebSockets, standard HTTP Fetch API)
+        let lastMessageCount = 0;
+
+        async function pollNetworkData() {
+            try {
+                // Fetching from the raw Python socket server
+                const response = await fetch('/api/network_state');
+                if (!response.ok) throw new Error("Network response was not ok");
+                
+                const data = await response.json();
+                
+                // Update User List
+                const userList = document.getElementById('user-list');
+                userList.innerHTML = '';
+                data.users.forEach(user => {
+                    const div = document.createElement('div');
+                    div.className = 'user-item';
+                    div.innerHTML = `<span class="status-dot">⬤</span> ${user}`;
+                    userList.appendChild(div);
+                });
+
+                // Update Messages
+                if (data.messages.length > lastMessageCount) {
+                    const msgContainer = document.getElementById('messages');
+                    if (lastMessageCount === 0) msgContainer.innerHTML = ''; // clear loading text
+                    
+                    for (let i = lastMessageCount; i < data.messages.length; i++) {
+                        const msg = data.messages[i];
+                        const div = document.createElement('div');
+                        div.className = 'message';
+                        const color = msg.is_private ? '#0056b3' : '#333';
+                        div.innerHTML = `<strong style="color:${color};">[${msg.sender}]:</strong> ${msg.text}`;
+                        msgContainer.appendChild(div);
+                    }
+                    lastMessageCount = data.messages.length;
+                    msgContainer.scrollTop = msgContainer.scrollHeight;
+                }
+
+                // Update File Progress
+                const fileContainer = document.getElementById('file-progress');
+                if (Object.keys(data.files).length > 0 && fileContainer.innerHTML.includes('No active')) {
+                    fileContainer.innerHTML = ''; // clear empty state
+                }
+                
+                for (const [filename, progress] of Object.entries(data.files)) {
+                    let progDiv = document.getElementById('prog-' + filename);
+                    if (!progDiv) {
+                        const container = document.createElement('div');
+                        container.className = 'progress-container';
+                        container.innerHTML = `
+                            <span style="font-size: 14px; font-weight: bold;">${filename}</span>
+                            <div class="progress-bar"><div class="progress" id="prog-${filename}" style="width: ${progress}%"></div></div>
+                        `;
+                        fileContainer.appendChild(container);
+                    } else {
+                        progDiv.style.width = progress + '%';
+                    }
+                }
+            } catch (error) {
+                console.error("Connection resilient retry...", error);
+            }
+            // Poll every 2 seconds
+            setTimeout(pollNetworkData, 2000);
+        }
+
+        // Initialize polling
+        pollNetworkData();
+    </script>
+</body>
+</html>
