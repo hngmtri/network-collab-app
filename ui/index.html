@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Messenger | Network Collab</title>
+    <style>
+        :root { font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #172033; background: #f3f5f9; }
+        * { box-sizing: border-box; }
+        body { margin: 0; height: 100vh; min-height: 520px; display: grid; place-items: center; padding: 22px; }
+        .messenger { width: min(1180px, 100%); height: min(820px, 100%); min-height: 480px; display: grid; grid-template-columns: 310px minmax(0, 1fr); overflow: hidden; background: #fff; border: 1px solid #e5e9f0; border-radius: 18px; box-shadow: 0 18px 60px #24304a1a; }
+        .people { display: flex; flex-direction: column; min-width: 0; background: #fbfcfe; border-right: 1px solid #e8ebf1; }
+        .brand { padding: 25px 22px 19px; display: flex; align-items: center; justify-content: space-between; }
+        .brand h1 { margin: 0; font-size: 23px; letter-spacing: -.7px; }
+        .brand-mark { width: 38px; height: 38px; border-radius: 13px; display: grid; place-items: center; color: white; font-size: 20px; font-weight: 700; background: linear-gradient(145deg,#1687ff,#7559f6); }
+        .search { margin: 0 16px 17px; padding: 11px 13px; border-radius: 12px; background: #f0f2f6; color: #8891a2; font-size: 14px; }
+        .section-label { padding: 0 21px 9px; color: #8992a2; font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
+        #user-list { overflow: auto; padding: 0 9px; }
+        .user-item { display: flex; gap: 12px; align-items: center; padding: 12px; margin: 2px 0; border-radius: 13px; color: #384258; font-size: 14px; }
+        .user-item.active { background: #eaf2ff; color: #1769d2; }
+        .avatar { width: 42px; height: 42px; flex: 0 0 42px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; background: linear-gradient(145deg,#55b7f6,#665cf2); }
+        .avatar.system { background: linear-gradient(145deg,#a5afc0,#68768d); }
+        .user-copy { min-width: 0; }
+        .user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 650; }
+        .user-state { margin-top: 4px; color: #8992a2; font-size: 12px; }
+        .online-dot { display: inline-block; width: 8px; height: 8px; margin-right: 5px; border-radius: 50%; background: #2fca78; }
+        .people-foot { margin-top: auto; padding: 16px 20px; border-top: 1px solid #edf0f4; color: #8b94a4; font-size: 12px; }
+        .conversation { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+        .chat-head { height: 82px; flex: 0 0 82px; display: flex; align-items: center; gap: 13px; padding: 0 25px; border-bottom: 1px solid #edf0f4; }
+        .chat-head .avatar { width: 44px; height: 44px; flex-basis: 44px; }
+        .chat-title { font-weight: 700; font-size: 15px; }
+        .chat-subtitle { margin-top: 4px; color: #8992a2; font-size: 12px; }
+        #messages { flex: 1; min-height: 0; overflow: auto; padding: 22px clamp(16px,4vw,48px); background: #fff; }
+        .day-label { margin: 0 0 20px; color: #9aa2b1; font-size: 11px; text-align: center; }
+        .message-row { display: flex; align-items: flex-end; gap: 8px; margin: 12px 0; }
+        .message-row.mine { justify-content: flex-end; }
+        .message-avatar { width: 27px; height: 27px; flex: 0 0 27px; border-radius: 50%; display: grid; place-items: center; color: white; font-size: 10px; font-weight: 700; background: #8a9ab4; }
+        .bubble-wrap { max-width: min(72%, 510px); }
+        .sender { margin: 0 0 5px 11px; color: #8b94a4; font-size: 11px; }
+        .bubble { padding: 11px 15px; border-radius: 18px 18px 18px 5px; background: #eef1f6; color: #253047; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; white-space: pre-wrap; }
+        .mine .bubble { border-radius: 18px 18px 5px 18px; background: linear-gradient(135deg,#1687ff,#536df5); color: white; }
+        .mine .sender { text-align: right; margin-right: 10px; }
+        .system-note { margin: 12px auto; width: fit-content; max-width: 85%; padding: 7px 12px; border-radius: 20px; background: #f6f7f9; color: #929aaa; font-size: 11px; text-align: center; }
+        .empty { margin-top: 15vh; color: #a2aab8; text-align: center; font-size: 14px; }
+        .file-panel { flex: 0 0 auto; max-height: 145px; overflow: auto; padding: 12px 25px; border-top: 1px solid #f0f2f6; background: #fcfdff; }
+        .file-heading { margin-bottom: 8px; color: #8c95a4; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+        .progress-container { margin: 8px 0; color: #485268; font-size: 12px; }
+        .progress-bar { height: 6px; margin-top: 6px; overflow: hidden; border-radius: 5px; background: #e9edf3; }
+        .progress { height: 100%; border-radius: inherit; background: #2784f5; transition: width .3s; }
+        .composer { display: flex; align-items: center; gap: 12px; padding: 15px 22px 18px; border-top: 1px solid #edf0f4; }
+        .attach { width: 38px; height: 38px; display: grid; place-items: center; border: 0; border-radius: 50%; background: #f0f4fa; color: #68768d; font-size: 19px; cursor: pointer; }
+        .attach:disabled { opacity: .45; cursor: default; }
+        .composer input { flex: 1; min-width: 0; height: 44px; padding: 0 17px; border: 0; outline: 0; border-radius: 24px; background: #f0f2f6; color: #253047; font: inherit; font-size: 14px; }
+        .send { width: 43px; height: 43px; border: 0; border-radius: 50%; color: white; background: #1680f7; font-size: 18px; cursor: pointer; box-shadow: 0 4px 12px #1680f744; }
+        .connection { padding: 6px; color: #8b94a4; font-size: 11px; text-align: center; }
+        .chat-tools { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+        .chat-tools select { max-width: 180px; padding: 9px 11px; border: 1px solid #e5e9f0; border-radius: 10px; background: white; color: #44506a; }
+        .logout { padding: 8px 11px; border: 1px solid #e5e9f0; border-radius: 10px; background: white; color: #536078; cursor: pointer; }
+        .login-screen { position: fixed; inset: 0; z-index: 5; display: grid; place-items: center; padding: 20px; background: #15203a88; backdrop-filter: blur(5px); }
+        .login-screen[hidden] { display: none; }
+        .login-card { width: min(390px, 100%); padding: 30px; border-radius: 20px; background: white; box-shadow: 0 22px 70px #17213b44; }
+        .login-card h2 { margin: 0 0 8px; font-size: 23px; }
+        .login-card p { margin: 0 0 22px; color: #778196; line-height: 1.5; font-size: 14px; }
+        .login-card input { width: 100%; height: 45px; padding: 0 13px; border: 1px solid #dfe4ed; border-radius: 11px; font: inherit; }
+        .login-card button { width: 100%; height: 45px; margin-top: 12px; border: 0; border-radius: 11px; color: white; background: #1680f7; font: inherit; font-weight: 650; cursor: pointer; }
+        .login-error { min-height: 18px; margin-top: 9px; color: #c43b4d; font-size: 12px; }
+        @media (max-width: 700px) { body { padding: 0; min-height: 0; } .messenger { height: 100vh; min-height: 0; grid-template-columns: 78px minmax(0,1fr); border: 0; border-radius: 0; } .brand { justify-content: center; padding: 17px 5px; } .brand h1,.search,.section-label,.user-copy,.people-foot { display: none; } #user-list { padding: 0 7px; } .user-item { justify-content: center; padding: 9px 0; } .user-item .avatar { width: 43px; height: 43px; } .chat-head { padding: 0 14px; } .composer { padding: 12px; gap: 7px; } .attach { display: none; } .file-panel { padding: 10px 14px; } }
+    </style>
+</head>
+<body>
+    <main class="messenger">
+        <aside class="people">
+            <div class="brand"><h1>Chats</h1><div class="brand-mark">m</div></div>
+            <div class="search">⌕ &nbsp; Search Messenger</div>
+            <div class="section-label">Active now</div>
+            <div id="user-list"><div class="user-item"><div class="avatar">…</div><div class="user-copy"><div class="user-name">Loading people</div></div></div></div>
+            <div class="people-foot">Network Collaboration</div>
+        </aside>
+        <section class="conversation">
+            <header class="chat-head">
+                <div class="avatar system">G</div>
+                <div><div class="chat-title" id="chat-title">Team chat</div><div class="chat-subtitle"><span class="online-dot"></span><span id="online-count">Connecting…</span></div></div>
+                <div class="chat-tools"><select id="recipient"><option value="">Everyone</option></select><button class="logout" id="logout-button" type="button" hidden>Sign out</button></div>
+            </header>
+            <div id="messages"><div class="empty">Messages from connected clients will appear here.</div></div>
+            <div class="file-panel"><div class="file-heading">File transfers</div><div id="file-progress">No active transfers</div></div>
+            <form class="composer" id="composer">
+                <button class="attach" id="attach-button" type="button" title="Send a file" disabled>＋</button>
+                <input id="file-input" type="file" hidden>
+                <input id="message-input" type="text" placeholder="Write a message…" autocomplete="off" disabled>
+                <button class="send" id="send-button" type="submit" aria-label="Send message" disabled>➤</button>
+            </form>
+            <div class="connection" id="connection-state">Live updates every 2 seconds · Send messages from the terminal client</div>
+        </section>
+    </main>
+    <div class="login-screen" id="login-screen">
+        <form class="login-card" id="login-form">
+            <h2>Welcome to chat</h2>
+            <p>Choose a display name to join this server and start messaging.</p>
+            <input id="login-name" maxlength="32" placeholder="Your name" autocomplete="nickname" required>
+            <button type="submit">Join chat</button>
+            <div class="login-error" id="login-error"></div>
+        </form>
+    </div>
+    <script>
+        let lastMessageCount = 0;
+        let currentUser = localStorage.getItem('chatName') || '';
+        let authToken = localStorage.getItem('chatToken') || '';
+        let lastState = { users: [], messages: [], files: {} };
+        let selectedRecipient = '';
+
+        function renderUsers(users) {
+            const list = document.getElementById('user-list');
+            list.replaceChildren();
+            if (!users.length) {
+                const empty = document.createElement('div');
+                empty.className = 'user-item';
+                empty.textContent = 'No one online yet';
+                list.appendChild(empty);
+            }
+            const names = users.map(user => String(user).replace(/ \(web\)$/, '').replace(/ \([^)]*\)$/, ''));
+            const select = document.getElementById('recipient');
+            const previous = select.value;
+            select.replaceChildren();
+            const everyone = document.createElement('option');
+            everyone.value = '';
+            everyone.textContent = 'Everyone';
+            select.appendChild(everyone);
+            const webNames = users
+                .filter(user => String(user).endsWith(' (web)'))
+                .map(user => String(user).replace(/ \(web\)$/, ''));
+            webNames.filter(name => name !== currentUser).forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = `Message ${name}`;
+                select.appendChild(option);
+            });
+            select.value = webNames.includes(previous) ? previous : '';
+            selectedRecipient = select.value;
+            users.forEach((user, index) => {
+                const row = document.createElement('div');
+                row.className = `user-item${index === 0 ? ' active' : ''}`;
+                const avatar = document.createElement('div');
+                avatar.className = 'avatar';
+                avatar.textContent = String(user).trim().charAt(0).toUpperCase() || '?';
+                const copy = document.createElement('div');
+                copy.className = 'user-copy';
+                const name = document.createElement('div');
+                name.className = 'user-name';
+                name.textContent = user;
+                const state = document.createElement('div');
+                state.className = 'user-state';
+                state.innerHTML = '<span class="online-dot"></span>Active now';
+                copy.append(name, state);
+                row.append(avatar, copy);
+                list.appendChild(row);
+            });
+            document.getElementById('online-count').textContent = `${users.length} ${users.length === 1 ? 'person' : 'people'} online`;
+        }
+
+        function renderMessages(messages) {
+            const container = document.getElementById('messages');
+            if (messages.length < lastMessageCount) {
+                container.replaceChildren();
+                lastMessageCount = 0;
+            }
+            if (!messages.length && !lastMessageCount) return;
+            if (lastMessageCount === 0) container.replaceChildren();
+            for (let i = lastMessageCount; i < messages.length; i++) {
+                const message = messages[i];
+                if (message.sender === 'System') {
+                    const note = document.createElement('div');
+                    note.className = 'system-note';
+                    note.textContent = message.text;
+                    container.appendChild(note);
+                    continue;
+                }
+                const row = document.createElement('div');
+                if (message.is_private && currentUser && ![message.sender, message.to].includes(currentUser)) continue;
+                const mine = message.sender === currentUser;
+                row.className = `message-row${mine ? ' mine' : ''}`;
+                if (!mine) {
+                    const avatar = document.createElement('div');
+                    avatar.className = 'message-avatar';
+                    avatar.textContent = String(message.sender || '?').charAt(0).toUpperCase();
+                    row.appendChild(avatar);
+                }
+                const wrap = document.createElement('div');
+                wrap.className = 'bubble-wrap';
+                const sender = document.createElement('div');
+                sender.className = 'sender';
+                sender.textContent = message.is_private ? `${message.sender} · Direct message` : message.sender;
+                const bubble = document.createElement('div');
+                bubble.className = 'bubble';
+                if (message.file_id) {
+                    bubble.textContent = `📎 ${message.text} · ${formatSize(message.file_size)} `;
+                    const download = document.createElement('a');
+                    download.href = `/api/download/${encodeURIComponent(message.file_id)}`;
+                    download.textContent = 'Download';
+                    download.style.color = mine ? 'white' : '#1672dc';
+                    download.addEventListener('click', async event => {
+                        event.preventDefault();
+                        const response = await fetch(download.href, { headers: { Authorization: `Bearer ${authToken}` } });
+                        if (!response.ok) { document.getElementById('connection-state').textContent = 'Could not download file.'; return; }
+                        const blob = await response.blob();
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a'); link.href = url; link.download = message.text; link.click();
+                        URL.revokeObjectURL(url);
+                    });
+                    bubble.appendChild(download);
+                } else bubble.textContent = message.text;
+                wrap.append(sender, bubble);
+                row.appendChild(wrap);
+                container.appendChild(row);
+            }
+            lastMessageCount = messages.length;
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function renderFiles(files) {
+            const container = document.getElementById('file-progress');
+            if (!Object.keys(files).length) {
+                container.textContent = 'No active transfers';
+                return;
+            }
+            container.replaceChildren();
+            for (const [filename, progress] of Object.entries(files)) {
+                const item = document.createElement('div');
+                item.className = 'progress-container';
+                const label = document.createElement('div');
+                label.textContent = `${filename} · ${progress}%`;
+                const bar = document.createElement('div');
+                bar.className = 'progress-bar';
+                const fill = document.createElement('div');
+                fill.className = 'progress';
+                fill.style.width = `${Math.max(0, Math.min(100, Number(progress) || 0))}%`;
+                bar.appendChild(fill);
+                item.append(label, bar);
+                container.appendChild(item);
+            }
+        }
+
+        async function pollNetworkData() {
+            try {
+                const response = await fetch('/api/network_state', { headers: authToken ? { Authorization: `Bearer ${authToken}` } : {} });
+                if (response.status === 401) {
+                    localStorage.removeItem('chatName');
+                    localStorage.removeItem('chatToken');
+                    currentUser = '';
+                    authToken = '';
+                    document.getElementById('login-screen').hidden = false;
+                    document.getElementById('message-input').disabled = true;
+                    document.getElementById('send-button').disabled = true;
+                }
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                lastState = data;
+                renderUsers(data.users || []);
+                renderMessages(data.messages || []);
+                renderFiles(data.files || {});
+                document.getElementById('login-screen').hidden = Boolean(currentUser && authToken);
+                document.getElementById('message-input').disabled = !authToken;
+                document.getElementById('send-button').disabled = !authToken;
+                document.getElementById('attach-button').disabled = !authToken;
+                document.getElementById('logout-button').hidden = !authToken;
+                document.getElementById('chat-title').textContent = selectedRecipient ? `Chat with ${selectedRecipient}` : 'Team chat';
+                document.getElementById('connection-state').textContent = authToken ? `Connected as ${currentUser} · Live chat` : 'Connected · Sign in to send messages';
+            } catch (error) {
+                document.getElementById('connection-state').textContent = 'Connecting to server…';
+                console.error('Dashboard update failed:', error);
+            }
+            setTimeout(pollNetworkData, 2000);
+        }
+
+        document.getElementById('recipient').addEventListener('change', event => {
+            selectedRecipient = event.target.value;
+            document.getElementById('chat-title').textContent = selectedRecipient ? `Chat with ${selectedRecipient}` : 'Team chat';
+            lastMessageCount = 0;
+            const visible = lastState.messages.filter(message => !message.is_private || [message.sender, message.to].includes(currentUser));
+            renderMessages(visible);
+        });
+
+        document.getElementById('login-form').addEventListener('submit', async event => {
+            event.preventDefault();
+            const name = document.getElementById('login-name').value.trim();
+            const errorBox = document.getElementById('login-error');
+            errorBox.textContent = '';
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Could not sign in.');
+                currentUser = result.name;
+                authToken = result.token;
+                localStorage.setItem('chatName', currentUser);
+                localStorage.setItem('chatToken', authToken);
+                document.getElementById('login-screen').hidden = true;
+                pollNetworkData();
+            } catch (error) { errorBox.textContent = error.message; }
+        });
+
+        document.getElementById('logout-button').addEventListener('click', async () => {
+            if (authToken) {
+                try {
+                    await fetch('/api/logout', {
+                        method: 'POST',
+                        headers: { Authorization: `Bearer ${authToken}` }
+                    });
+                } catch (error) { console.warn('Sign out request failed:', error); }
+            }
+            localStorage.removeItem('chatName');
+            localStorage.removeItem('chatToken');
+            currentUser = '';
+            authToken = '';
+            lastMessageCount = 0;
+            document.getElementById('login-screen').hidden = false;
+            document.getElementById('message-input').disabled = true;
+            document.getElementById('send-button').disabled = true;
+            document.getElementById('attach-button').disabled = true;
+            document.getElementById('logout-button').hidden = true;
+            document.getElementById('login-name').value = '';
+            pollNetworkData();
+        });
+
+        document.getElementById('composer').addEventListener('submit', async event => {
+            event.preventDefault();
+            const input = document.getElementById('message-input');
+            const text = input.value.trim();
+            if (!text || !authToken) return;
+            const packet = { type: selectedRecipient ? 'MSG_UNICAST' : 'MSG_BROADCAST', text };
+            if (selectedRecipient) packet.to = selectedRecipient;
+            try {
+                const response = await fetch('/api/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+                    body: JSON.stringify(packet)
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Message failed to send.');
+                input.value = '';
+                await pollNetworkData();
+            } catch (error) { document.getElementById('connection-state').textContent = error.message; }
+        });
+        function formatSize(bytes) {
+            return bytes < 1024 * 1024 ? `${Math.ceil(bytes / 1024)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+        }
+        document.getElementById('attach-button').addEventListener('click', () => {
+            if (!selectedRecipient) {
+                document.getElementById('connection-state').textContent = 'Choose a recipient before attaching a file.';
+                return;
+            }
+            document.getElementById('file-input').click();
+        });
+        document.getElementById('file-input').addEventListener('change', async event => {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.size > 8 * 1024 * 1024) {
+                document.getElementById('connection-state').textContent = 'Web uploads are limited to 8 MiB. Use terminal for larger files.';
+                event.target.value = '';
+                return;
+            }
+            document.getElementById('connection-state').textContent = `Uploading ${file.name}…`;
+            try {
+                const bytes = new Uint8Array(await file.arrayBuffer());
+                let binary = '';
+                for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+                const response = await fetch('/api/upload', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+                    body: JSON.stringify({ name: file.name, to: selectedRecipient, data: btoa(binary) })
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Upload failed.');
+                document.getElementById('connection-state').textContent = `Sent ${file.name} to ${selectedRecipient}`;
+                await pollNetworkData();
+            } catch (error) {
+                document.getElementById('connection-state').textContent = error.message;
+            } finally { event.target.value = ''; }
+        });
+        pollNetworkData();
+    </script>
+</body>
+</html>
